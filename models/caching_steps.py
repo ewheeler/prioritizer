@@ -2,6 +2,7 @@ from flask import json
 import hashlib
 import urllib2, base64
 from models.encoder import Encoder
+from werkzeug.exceptions import HTTPException
 
 
 class StepsCache(object):
@@ -26,6 +27,8 @@ class StepsCache(object):
         response = self.get_authorized_response(self.url)
 
         data = json.loads(response.read())
+        if "steps" not in data:
+            raise HTTPException('API Error')
         return data["steps"]
 
     def delete_script_steps_data(self):
