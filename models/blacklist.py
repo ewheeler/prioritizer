@@ -1,10 +1,10 @@
 
-class ContentTypes():
+class ContentTypes(object):
     TEXT = "text"
     CONTACTS = "contacts"
 
 
-class BlacklistFoundation:
+class BlacklistFoundation(object):
 
     POLL_TEXT_KEY = "blacklist:poll_texts:%s"
     POLL_CONTACTS_KEY = "blacklist:poll_contacts:%s"

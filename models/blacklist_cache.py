@@ -1,7 +1,7 @@
 from models.encoder import Encoder
 
 
-class BlacklistCache:
+class BlacklistCache(object):
 
     def __init__(self, client):
         self.client = client

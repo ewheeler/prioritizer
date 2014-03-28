@@ -4,7 +4,7 @@ import urllib2, base64
 from models.encoder import Encoder
 
 
-class StepsCache:
+class StepsCache(object):
 
     def __init__(self, client, username, password, url, cache_key_name):
         self.client = client
