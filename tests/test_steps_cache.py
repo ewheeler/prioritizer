@@ -3,6 +3,8 @@ from mock import patch, Mock, MagicMock
 from mockredis import mock_strict_redis_client
 from models.caching_steps import StepsCache
 from flask import json
+import urllib2
+
 
 def encode_mock(encode_values):
     def side_effect(args):
@@ -78,10 +80,57 @@ class TestStepsCache(TestCase):
         urlopen_mock.assert_called_once_with(request_mock)
         request_mock.add_header.assert_called_once_with('Authorization', 'Basic %s' % auth_data)
 
+    @patch('base64.encodestring')
+    @patch('urllib2.Request')
+    @patch('urllib2.urlopen')
+    def test_authorized_response_server_error(self, urlopen_mock, request_class_mock, encoded_str_mock):
+        request_mock = Mock()
+        add_header = Mock()
+        request_mock.add_header = add_header
+        request_class_mock.return_value = request_mock
+        fake_response = "response"
+        urlopen_mock.return_value = fake_response
+        urlopen_mock.side_effect = urllib2.HTTPError('http://example.com', 500,
+                                                     'server error',
+                                                     None, None)
+        auth_data = "user:passwd"
+        encoded_str_mock.return_value = auth_data
+        # raises urllib2.HTTPError
+        self.assertEquals(self.cache.get_authorized_response("my_http_address"), fake_response)
+        urlopen_mock.assert_called_once_with(request_mock)
+        request_mock.add_header.assert_called_once_with('Authorization', 'Basic %s' % auth_data)
+
     def test_retrieve_of_json_data_from_api(self):
         json_response = json.dumps({"steps": ["step 1", "step 2"]})
         response_mock = Mock()
         response_mock.read = Mock(return_value=json_response)
         self.cache.get_authorized_response = Mock(return_value=response_mock)
 
+        self.assertListEqual(self.cache.get_steps_information(), ["step 1", "step 2"])
+
+    def test_retrieve_of_json_data_from_api_error(self):
+        json_response = json.dumps({"error": "something went wrong"})
+        response_mock = Mock()
+        response_mock.read = Mock(return_value=json_response)
+        self.cache.get_authorized_response = Mock(return_value=response_mock)
+
+        # raises HTTPException
+        self.assertListEqual(self.cache.get_steps_information(), ["step 1", "step 2"])
+
+    def test_retrieve_of_bad_json_data_from_api(self):
+        json_response = '"this is": "[invalid,] json",'
+        response_mock = Mock()
+        response_mock.read = Mock(return_value=json_response)
+        self.cache.get_authorized_response = Mock(return_value=response_mock)
+
+        # raises ValueError
+        self.assertListEqual(self.cache.get_steps_information(), ["step 1", "step 2"])
+
+    def test_retrieve_of_json_data_from_api_server_error(self):
+        self.cache.get_authorized_response = Mock(side_effect=\
+                                                  urllib2.HTTPError('http://example.com',
+                                                                    500, 'server error',
+                                                                    None, None))
+
+        # raises urllib2.HTTPError
         self.assertListEqual(self.cache.get_steps_information(), ["step 1", "step 2"])
